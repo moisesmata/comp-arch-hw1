@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define REPEAT 1000
-#define ROW_BUFFER_SIZE (2 * 1024)  //depends on your system (DRAM Row buffer size)
+#define REPEAT 1
+#define ROW_BUFFER_SIZE (4 * 1024)  //depends on your system (DRAM Row buffer size)
 
 static inline void clflush(volatile void *p) {
     asm volatile ("clflush (%0)" :: "r"(p));
