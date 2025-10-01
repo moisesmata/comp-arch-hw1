@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define REPEAT 1000000
+#define REPEAT 100000
 
 void clflush(volatile void *p) {
     asm volatile("clflush (%0)" :: "r" (p));
@@ -11,19 +11,21 @@ void clflush(volatile void *p) {
 
 uint64_t rdtsc() {
     unsigned long a, d;
-    asm volatile("mfence");
     asm volatile("rdtsc" : "=a" (a), "=d" (d));
-    asm volatile("mfence");
     return a | ((uint64_t)d << 32);
 }
 
 void memtest(FILE *f, int power) {
     uint64_t start, end, clock;
     size_t buffer_size = 1UL << power;  // 2^power bytes
-    
+
+    // Allocate a buffer of size 2^n bytes
     char *buffer = (char *)malloc(buffer_size);
+
+    // Allocate another buffer of the same size to copy the data into
     char *buffer_copy = (char *)malloc(buffer_size);
     
+    // Check to make sure that the buffers allocated correctly
     if (!buffer || !buffer_copy) {
         fprintf(stderr, "Failed to allocate %zu bytes\n", buffer_size);
         return;
@@ -34,25 +36,39 @@ void memtest(FILE *f, int power) {
         buffer[i] = '1';
     }
     
+    // Set clock to initially
     clock = 0;
     
+    // Get multiple trials worth of data
     for (long rep = 0; rep < REPEAT; rep++) {
-        //flush the cache before each mesurement
+
+        // Flush the cache line before each measurement
+        // Make sure to do this for the all of the data, which is 2^N bytes!
+        // Do it 64 bytes at a time
         for (size_t i = 0; i < buffer_size; i += 64) {
             clflush(buffer + i);
             clflush(buffer_copy + i);
         }
         
+        // Start the timer
         asm volatile("mfence");
-        
         start = rdtsc();
+
+        // Copy the data over
         memcpy(buffer_copy, buffer, buffer_size);
+
+        // End the timer
+        asm volatile("mfence");
         end = rdtsc();
         
+        // Calculate the number of ticks
         uint64_t ticks = end - start;
         clock += ticks;
         
+        // Export to a csv
         fprintf(f, "%lu", ticks);
+
+        // Add a comma
         if(rep < (REPEAT - 1)){
             fputc(',', f);
         } 
