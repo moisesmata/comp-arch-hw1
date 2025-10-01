@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define REPEAT 100000
-
+#define REPEAT 10000
 void clflush(volatile void *p) {
     asm volatile("clflush (%0)" :: "r" (p));
 }

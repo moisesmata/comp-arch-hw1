@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define REPEAT 1
-#define ROW_BUFFER_SIZE (8 * 1024)  //depends on your system (DRAM Row buffer size)
+#define REPEAT 1000
+#define ROW_BUFFER_SIZE (2 * 1024)  //depends on your system (DRAM Row buffer size)
 
 static inline void clflush(volatile void *p) {
     asm volatile ("clflush (%0)" :: "r"(p));
@@ -43,6 +43,13 @@ void memtest() {
         memcpy(buffer_copy, buffer, ROW_BUFFER_SIZE);
         end = rdtsc();
         total_first += (end - start);
+
+        // flush from cache again -- we want to test DRAM, not cache
+        for (size_t i = 0; i < ROW_BUFFER_SIZE; i += 64) {
+            clflush(buffer + i);
+            clflush(buffer_copy + i);
+        }
+        asm volatile("mfence");
 
         // Second copy operation timing, no flush in between to test row buffer hit
         start = rdtsc();
